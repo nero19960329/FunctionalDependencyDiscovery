@@ -19,7 +19,7 @@ int main() {
 	cout << "Running algorithm . . ." << endl;
 	tane.run(fout);
 	cout << "============================================" << endl;
-	cout << "Number of functional depedencies : " << tane.getCount() << endl;
+	cout << "Number of functional dependencies : " << tane.getCount() << endl;
 	cout << "Get more detail in result.txt" << endl;
 
 	end = clock();

@@ -39,10 +39,12 @@ void Tane::output(int x, int y, ostream& outputStream) {
 }
 
 int Tane::pi(int num) {
-	if (piTmp[num] == 0) {
+	int res = piTmp[num];
+	if (!res) {
 		vector<int> countNum;
-		int tmpNum, res;
+		int tmpNum;
 		string str;
+		unordered_map<string, bool>::iterator it;
 
 		tmpNum = num;
 		for (int i = 0; i < attrNum; ++i) {
@@ -58,20 +60,21 @@ int Tane::pi(int num) {
 			str = table[i][countNum[0]];
 			if (countNum.size() > 1) {
 				for (int j = 1; j < countNum.size(); ++j) {
-					str += ",";
-					str += table[i][countNum[j]];
+					str.append(",");
+					str.append(table[i][countNum[j]]);
 				}
 			}
 			
-			if (hashMap[str]) {
+			it = hashMap.find(str);
+			if (it != hashMap.end()) {
 				--res;
 			} else {
-				hashMap[str] = true;
+				hashMap.insert(make_pair(str, true));
 			}
 		}
 		piTmp[num] = res;
 	}
-	return piTmp[num];
+	return res;
 }
 
 void Tane::computeDependencies(Level l, ostream& outputStream) {
