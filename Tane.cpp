@@ -42,6 +42,7 @@ int Tane::pi(int num) {
 	if (piTmp[num] == 0) {
 		vector<int> countNum;
 		int tmpNum, res;
+		string str;
 
 		tmpNum = num;
 		for (int i = 0; i < attrNum; ++i) {
@@ -54,7 +55,7 @@ int Tane::pi(int num) {
 		hashMap.clear();
 		res = table.size();
 		for (int i = 0; i < table.size(); ++i) {
-			string str = table[i][countNum[0]];
+			str = table[i][countNum[0]];
 			if (countNum.size() > 1) {
 				for (int j = 1; j < countNum.size(); ++j) {
 					str += ",";
