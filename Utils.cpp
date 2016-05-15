@@ -1,6 +1,7 @@
 #include "Utils.h"
 
 #include <fstream>
+#include <iostream>
 
 using namespace std;
 
@@ -21,6 +22,10 @@ vector<string*> readData(string fileName, int& col) {
 	ifstream fin(fileName);
 	string tmp = "";
 	vector<string*> res;
+
+	if (!fin) {
+		throw -1;
+	}
 
 	// get column number
 	if (!fin.eof()) {

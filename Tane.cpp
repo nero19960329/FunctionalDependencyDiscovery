@@ -6,15 +6,17 @@
 using namespace std;
 
 Tane::Tane(string dataFileName) {
-	int tmp = (1 << attrNum);
+	int tmp;
 
 	table = readData(dataFileName, attrNum);
+	tmp = (1 << attrNum);
 	cnt = 0;
-	//piTmp = new int[1 << attrNum];
 	piTmp = new vector< vector<int> >[tmp];
 	piCntTmp = new bool[tmp];
-	memset(piTmp, 0, tmp * sizeof(int));
+	piSumTmp = new int[tmp];
+	memset(piTmp, 0, tmp * sizeof(vector< vector<int> >));
 	memset(piCntTmp, 0, tmp * sizeof(bool));
+	memset(piSumTmp, 0, tmp * sizeof(int));
 }
 
 int Tane::getCount() {
@@ -54,7 +56,6 @@ int Tane::pi(int num) {
 	int tmpIndex;
 	vector<int> tmpVec;
 	vector< vector<int> > tmpSet;
-	vector< vector<int> >::const_iterator vecIt;
 	unordered_map<string, int>::const_iterator hashIt;
 
 	tmpNum = num;
@@ -65,37 +66,33 @@ int Tane::pi(int num) {
 		tmpNum /= 2;
 	}
 
-	if (countNum.size() == 1) {
-		// first, use unordered_map to do the partition
-		tmpIndex = 0;
-		hashMap.clear();
-		for (int i = 0; i < table.size(); ++i) {
-			str = table[i][countNum[0]];
+	// first, use unordered_map to do the partition
+	tmpIndex = 0;
+	hashMap.clear();
+	for (int i = 0; i < table.size(); ++i) {
+		str = table[i][countNum[0]];
 
-			hashIt = hashMap.find(str);
-			if (hashIt != hashMap.end()) {
-				tmpSet[hashIt->second].push_back(i);
-			} else {
-				hashMap.insert(make_pair(str, tmpIndex++));
-				tmpVec = vector<int>();
-				tmpVec.push_back(i);
-				tmpSet.push_back(tmpVec);
-			}
+		hashIt = hashMap.find(str);
+		if (hashIt != hashMap.end()) {
+			tmpSet[hashIt->second].push_back(i);
+		} else {
+			hashMap.insert(make_pair(str, tmpIndex++));
+			tmpVec = vector<int>();
+			tmpVec.push_back(i);
+			tmpSet.push_back(tmpVec);
 		}
-
-		// then, drop the set that length equals to 1
-		for (vecIt = tmpSet.cbegin(); vecIt != tmpSet.cend(); ++vecIt) {
-			if (vecIt->size() != 1) {
-				piTmp[num].push_back(*vecIt);
-			}
-		}
-
-		piCntTmp[num] = true;
-		return piTmp[num].size();
-	} else {
-		cout << "error from pi!\n" << endl;
-		throw -1;
 	}
+
+	// then, drop the set that length equals to 1
+	for (auto t : tmpSet) {
+		if (t.size() != 1) {
+			piTmp[num].push_back(t);
+			piSumTmp[num] += t.size();
+		}
+	}
+
+	piCntTmp[num] = true;
+	return piTmp[num].size();
 }
 
 int Tane::piProduct(int a, int b) {
@@ -118,63 +115,44 @@ int Tane::piProduct(int a, int b) {
 		tmpNum /= 2;
 	}
 
-	if (countNum.size() == 1) {
-		throw -1;
-	} else {
-		lenA = pi(a);
-		lenB = pi(b);
-		T = new int[table.size()];
-		S = vector< vector<int> >(lenA);
-		tmpVec = vector<int>();
+	lenA = pi(a);
+	lenB = pi(b);
+	T = new int[table.size()];
+	S = vector< vector<int> >(lenA);
+	tmpVec = vector<int>();
 
-		memset(T, -1, table.size() * sizeof(int));
-		for (int i = 0; i < lenA; ++i) {
-			for (auto t : piTmp[a][i]) {
-				T[t] = i;
-			}
-			S.push_back(tmpVec);
+	memset(T, -1, table.size() * sizeof(int));
+	for (int i = 0; i < lenA; ++i) {
+		for (auto t : piTmp[a][i]) {
+			T[t] = i;
 		}
+		S.push_back(tmpVec);
+	}
 
-		for (int i = 0; i < lenB; ++i) {
-			for (auto t : piTmp[b][i]) {
-				if (T[t] >= 0) {
-					S[T[t]].push_back(t);
-				}
-			}
-			for (auto t : piTmp[b][i]) {
-				if (T[t] >= 0) {
-					if (S[T[t]].size() >= 2) {
-						piTmp[a + b].push_back(S[T[t]]);
-					}
-					S[T[t]] = tmpVec;
-				}
+	for (int i = 0; i < lenB; ++i) {
+		for (auto t : piTmp[b][i]) {
+			if (T[t] >= 0) {
+				S[T[t]].push_back(t);
 			}
 		}
-
-		piCntTmp[a + b] = true;
-		return piTmp[a + b].size();
+		for (auto t : piTmp[b][i]) {
+			if (T[t] >= 0) {
+				if (S[T[t]].size() >= 2) {
+					piTmp[a + b].push_back(S[T[t]]);
+					piSumTmp[a + b] += S[T[t]].size();
+				}
+				S[T[t]] = tmpVec;
+			}
+		}
 	}
-}
 
-int Tane::error(int num) {
-	int a, b;
-
-	b = pi(num);
-	a = 0;
-
-	for (int i = 0; i < piTmp[num].size(); ++i) {
-		a += piTmp[num][i].size();
-	}
-	//for (auto t : piTmp[num]) {
-	//	a += t.size();
-	//}
-
-	return a - b;
+	piCntTmp[a + b] = true;
+	return piTmp[a + b].size();
 }
 
 void Tane::computeDependencies(Level l, ostream& outputStream) {
 	set<int>::iterator it, begin, end;
-	int x, tmpA, flag, shiftTmp, res, e, m, comple, tmpB;
+	int x, tmpA, flag, shiftTmp, res, e, m, comple, tmpB, tmpE1, tmpE2;
 
 	begin = l.elems.begin();
 	end = l.elems.end();
@@ -205,10 +183,10 @@ void Tane::computeDependencies(Level l, ostream& outputStream) {
 		for (int i = 0; i < attrNum; ++i) {
 			if (m & tmpA) {
 				// if X\{E} -> E is valid
-				pi(x - tmpA);
-				piProduct(x - tmpA, tmpA);
-				if (error(x - tmpA) == error(x)) {
-					//output(x - tmpA, tmpA, outputStream);
+				tmpE1 = pi(x - tmpA);
+				tmpE2 = piProduct(x - tmpA, tmpA);
+				if (piSumTmp[x - tmpA] - tmpE1 == piSumTmp[x] - tmpE2) {
+					output(x - tmpA, tmpA, outputStream);
 					++cnt;
 					// remove E for RHS+(X)
 					rhs[x] -= tmpA;
