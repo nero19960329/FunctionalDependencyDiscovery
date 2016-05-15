@@ -3,9 +3,11 @@
 #include <fstream>
 #include <ctime>
 
+#include <vector>
+
 using namespace std;
 
-int main() {
+void run() {
 	ofstream fout("./result.txt");
 
 	time_t begin, end;
@@ -13,7 +15,7 @@ int main() {
 
 	cout << "============================================" << endl;
 	cout << "Initializing tane algorithm . . ." << endl;
-	Tane tane = Tane("./data.txt");
+	Tane tane = Tane("./big_data.txt");
 	cout << "Initialize ok!" << endl;
 	cout << "============================================" << endl;
 	cout << "Running algorithm . . ." << endl;
@@ -28,6 +30,10 @@ int main() {
 
 	fout.flush();
 	fout.close();
+}
+
+int main() {
+	run();
 
 	return 0;
 }

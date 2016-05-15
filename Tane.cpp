@@ -6,10 +6,15 @@
 using namespace std;
 
 Tane::Tane(string dataFileName) {
+	int tmp = (1 << attrNum);
+
 	table = readData(dataFileName, attrNum);
 	cnt = 0;
-	piTmp = new int[1 << attrNum];
-	memset(piTmp, 0, (1 << attrNum) * sizeof(int));
+	//piTmp = new int[1 << attrNum];
+	piTmp = new vector< vector<int> >[tmp];
+	piCntTmp = new bool[tmp];
+	memset(piTmp, 0, tmp * sizeof(int));
+	memset(piCntTmp, 0, tmp * sizeof(bool));
 }
 
 int Tane::getCount() {
@@ -39,42 +44,132 @@ void Tane::output(int x, int y, ostream& outputStream) {
 }
 
 int Tane::pi(int num) {
-	int res = piTmp[num];
-	if (!res) {
-		vector<int> countNum;
-		int tmpNum;
-		string str;
-		unordered_map<string, bool>::iterator it;
+	if (piCntTmp[num]) {
+		return piTmp[num].size();
+	}
 
-		tmpNum = num;
-		for (int i = 0; i < attrNum; ++i) {
-			if (tmpNum % 2) {
-				countNum.push_back(i);
-			}
-			tmpNum /= 2;
+	vector<int> countNum;
+	int tmpNum;
+	string str;
+	int tmpIndex;
+	vector<int> tmpVec;
+	vector< vector<int> > tmpSet;
+	vector< vector<int> >::const_iterator vecIt;
+	unordered_map<string, int>::const_iterator hashIt;
+
+	tmpNum = num;
+	for (int i = 0; i < attrNum; ++i) {
+		if (tmpNum % 2) {
+			countNum.push_back(i);
 		}
+		tmpNum /= 2;
+	}
 
+	if (countNum.size() == 1) {
+		// first, use unordered_map to do the partition
+		tmpIndex = 0;
 		hashMap.clear();
-		res = table.size();
 		for (int i = 0; i < table.size(); ++i) {
 			str = table[i][countNum[0]];
-			if (countNum.size() > 1) {
-				for (int j = 1; j < countNum.size(); ++j) {
-					str.append(",");
-					str.append(table[i][countNum[j]]);
-				}
-			}
-			
-			it = hashMap.find(str);
-			if (it != hashMap.end()) {
-				--res;
+
+			hashIt = hashMap.find(str);
+			if (hashIt != hashMap.end()) {
+				tmpSet[hashIt->second].push_back(i);
 			} else {
-				hashMap.insert(make_pair(str, true));
+				hashMap.insert(make_pair(str, tmpIndex++));
+				tmpVec = vector<int>();
+				tmpVec.push_back(i);
+				tmpSet.push_back(tmpVec);
 			}
 		}
-		piTmp[num] = res;
+
+		// then, drop the set that length equals to 1
+		for (vecIt = tmpSet.cbegin(); vecIt != tmpSet.cend(); ++vecIt) {
+			if (vecIt->size() != 1) {
+				piTmp[num].push_back(*vecIt);
+			}
+		}
+
+		piCntTmp[num] = true;
+		return piTmp[num].size();
+	} else {
+		cout << "error from pi!\n" << endl;
+		throw -1;
 	}
-	return res;
+}
+
+int Tane::piProduct(int a, int b) {
+	if (piCntTmp[a + b]) {
+		return piTmp[a + b].size();
+	}
+
+	vector<int> countNum;
+	int tmpNum;
+	int lenA, lenB;
+	int *T;
+	vector< vector<int> > S;
+	vector<int> tmpVec;
+
+	tmpNum = a + b;
+	for (int i = 0; i < attrNum; ++i) {
+		if (tmpNum % 2) {
+			countNum.push_back(i);
+		}
+		tmpNum /= 2;
+	}
+
+	if (countNum.size() == 1) {
+		throw -1;
+	} else {
+		lenA = pi(a);
+		lenB = pi(b);
+		T = new int[table.size()];
+		S = vector< vector<int> >(lenA);
+		tmpVec = vector<int>();
+
+		memset(T, -1, table.size() * sizeof(int));
+		for (int i = 0; i < lenA; ++i) {
+			for (auto t : piTmp[a][i]) {
+				T[t] = i;
+			}
+			S.push_back(tmpVec);
+		}
+
+		for (int i = 0; i < lenB; ++i) {
+			for (auto t : piTmp[b][i]) {
+				if (T[t] >= 0) {
+					S[T[t]].push_back(t);
+				}
+			}
+			for (auto t : piTmp[b][i]) {
+				if (T[t] >= 0) {
+					if (S[T[t]].size() >= 2) {
+						piTmp[a + b].push_back(S[T[t]]);
+					}
+					S[T[t]] = tmpVec;
+				}
+			}
+		}
+
+		piCntTmp[a + b] = true;
+		return piTmp[a + b].size();
+	}
+}
+
+int Tane::error(int num) {
+	int a, b;
+
+	b = pi(num);
+	a = 0;
+
+	for (int i = 0; i < piTmp[num].size(); ++i) {
+		a += piTmp[num][i].size();
+	}
+	//for (auto t : piTmp[num]) {
+	//	a += t.size();
+	//}
+
+	return a - b;
 }
 
 void Tane::computeDependencies(Level l, ostream& outputStream) {
@@ -110,8 +205,10 @@ void Tane::computeDependencies(Level l, ostream& outputStream) {
 		for (int i = 0; i < attrNum; ++i) {
 			if (m & tmpA) {
 				// if X\{E} -> E is valid
-				if (pi(x - tmpA) == pi(x)) {
-					output(x - tmpA, tmpA, outputStream);
+				pi(x - tmpA);
+				piProduct(x - tmpA, tmpA);
+				if (error(x - tmpA) == error(x)) {
+					//output(x - tmpA, tmpA, outputStream);
 					++cnt;
 					// remove E for RHS+(X)
 					rhs[x] -= tmpA;
